@@ -83,3 +83,32 @@ class OTPVerification(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.phone_number}"
+
+
+class NINVerification(models.Model):
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        VERIFIED = 'VERIFIED', 'Verified'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE,
+        related_name='nin_verification'
+    )
+    nin = models.CharField(max_length=11)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='nin_reviews'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"NIN for {self.user.name} - {self.status}"

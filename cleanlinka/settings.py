@@ -24,7 +24,9 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+
 ]
 
 LOCAL_APPS = [
@@ -32,19 +34,23 @@ LOCAL_APPS = [
     'pickups',
     'notifications',
     'locations',
+    'admin_panel',
+    'collector',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+   
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'cleanlinka.urls'
@@ -100,8 +106,20 @@ REST_FRAMEWORK = {
     ),
 }
 
+
+# CORS
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = False
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.ngrok-free.app",
+]
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',
+    'ngrok-skip-browser-warning',
+]
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

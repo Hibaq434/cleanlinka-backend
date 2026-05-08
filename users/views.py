@@ -4,12 +4,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer,
-    ResendOTPSerializer, LoginSerializer, UserSerializer
+    ResendOTPSerializer, LoginSerializer, UserSerializer,
+    LogoutSerializer, NINVerificationSerializer
 )
-from .models import OTPVerification
+from .models import OTPVerification, NINVerification
 from .utils import send_otp
 
 User = get_user_model()
@@ -144,3 +145,57 @@ def login(request):
 def me(request):
     serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    serializer = LogoutSerializer(data=request.data)
+    if serializer.is_valid():
+        try:
+            token = RefreshToken(serializer.validated_data['refresh'])
+            token.blacklist()
+            return Response(
+                {'message': 'Logged out successfully.'},
+                status=status.HTTP_200_OK
+            )
+        except TokenError:
+            return Response(
+                {'error': 'Invalid or expired token'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_nin(request):
+    serializer = NINVerificationSerializer(data=request.data)
+    if serializer.is_valid():
+        nin = serializer.validated_data['nin']
+
+        existing = NINVerification.objects.filter(user=request.user).first()
+        if existing:
+            if existing.status == 'VERIFIED':
+                return Response(
+                    {'error': 'NIN already verified'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            existing.nin = nin
+            existing.status = 'PENDING'
+            existing.save()
+            return Response({
+                'message': 'NIN updated and submitted for verification.',
+                'status': 'PENDING'
+            }, status=status.HTTP_200_OK)
+
+        NINVerification.objects.create(
+            user=request.user,
+            nin=nin
+        )
+        return Response({
+            'message': 'NIN submitted for verification.',
+            'status': 'PENDING'
+        }, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

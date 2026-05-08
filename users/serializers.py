@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import CollectorProfile, OTPVerification
+from .models import CollectorProfile, OTPVerification, NINVerification
 
 User = get_user_model()
 
@@ -90,3 +90,23 @@ class UserSerializer(serializers.ModelSerializer):
             except CollectorProfile.DoesNotExist:
                 return None
         return None
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class NINVerificationSerializer(serializers.Serializer):
+    nin = serializers.CharField(max_length=11, min_length=11)
+
+    def validate_nin(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('NIN must contain only numbers')
+        return value
+
+
+class NINVerificationStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import NINVerification
+        model = NINVerification
+        fields = ['nin', 'status', 'created_at', 'reviewed_at']
