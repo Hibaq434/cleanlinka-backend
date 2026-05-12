@@ -4,37 +4,37 @@ from users.models import User
 
 class Notification(models.Model):
 
-    class NotificationType(models.TextChoices):
+    class Channel(models.TextChoices):
+        SMS = 'SMS', 'SMS'
+        WHATSAPP = 'WHATSAPP', 'WhatsApp'
+        PUSH = 'PUSH', 'Push'
+
+    class Event(models.TextChoices):
+        REQUEST_RECEIVED = 'REQUEST_RECEIVED', 'Request Received'
         JOB_ASSIGNED = 'JOB_ASSIGNED', 'Job Assigned'
-        JOB_CANCELLED = 'JOB_CANCELLED', 'Job Cancelled'
-        GENERAL = 'GENERAL', 'General'
+        COLLECTOR_ACCEPTED = 'COLLECTOR_ACCEPTED', 'Collector Accepted'
+        COLLECTOR_ON_THE_WAY = 'COLLECTOR_ON_THE_WAY', 'Collector On The Way'
+        JOB_COMPLETED = 'JOB_COMPLETED', 'Job Completed'
+        JOB_MISSED = 'JOB_MISSED', 'Job Missed'
 
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        SENT = 'SENT', 'Sent'
+        FAILED = 'FAILED', 'Failed'
+
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE,
         related_name='notifications'
     )
-    notification_type = models.CharField(
-        max_length=30,
-        choices=NotificationType.choices,
-        default=NotificationType.GENERAL
-    )
-    title = models.CharField(max_length=255)
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    event = models.CharField(max_length=30, choices=Event.choices)
     message = models.TextField()
-
-    # String reference avoids circular import: notifications -> pickups -> notifications
-    job = models.ForeignKey(
-        'pickups.Job',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='notifications'
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING
     )
-    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ['-created_at']
-
     def __str__(self):
-        return f"Notification → {self.user.name}: {self.title}"
+        return f"Notification for {self.recipient.name} - {self.event}"

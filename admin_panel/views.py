@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from users.models import User, CollectorProfile, NINVerification
 from pickups.models import PickupRequest, Job
+from notifications.models import Notification
 from .permissions import IsAdmin
 from .serializers import (
     CollectorListSerializer, UserListSerializer,
@@ -58,7 +59,6 @@ def collector_detail(request, pk):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     if request.method == 'PATCH':
-        # FIX: Guard against missing collector_profile
         try:
             profile = collector.collector_profile
         except CollectorProfile.DoesNotExist:
@@ -87,7 +87,6 @@ def verify_collector(request, pk):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # FIX: Guard against missing collector_profile
     try:
         profile = collector.collector_profile
     except CollectorProfile.DoesNotExist:
@@ -127,8 +126,6 @@ def job_list(request):
     if request.method == 'POST':
         serializer = CreatePickupRequestSerializer(data=request.data)
         if serializer.is_valid():
-            # FIX: Pass logged_by_admin via context so the serializer
-            # create() method can access it (see serializers.py).
             pickup = serializer.save(logged_by_admin=request.user)
             return Response(
                 PickupRequestSerializer(pickup).data,
@@ -141,7 +138,9 @@ def job_list(request):
 @permission_classes([IsAdmin])
 def job_detail(request, pk):
     try:
-        job = Job.objects.select_related('request', 'collector', 'assigned_by').get(id=pk)
+        job = Job.objects.select_related(
+            'request', 'collector', 'assigned_by'
+        ).get(id=pk)
     except Job.DoesNotExist:
         return Response(
             {'error': 'Job not found'},
@@ -153,13 +152,12 @@ def job_detail(request, pk):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     if request.method == 'PATCH':
-        # FIX: Use serializer for partial update instead of only patching status.
-        # This respects validation and handles any writable field the frontend sends.
-        serializer = JobSerializer(job, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        new_status = request.data.get('status')
+        if new_status:
+            job.status = new_status
+            job.save()
+        serializer = JobSerializer(job)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     if request.method == 'DELETE':
         job.delete()
@@ -172,20 +170,6 @@ def job_detail(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAdmin])
 def assign_job(request, pk):
-    # FIX: The URL is /admin/jobs/:id/assign/ so pk refers to a Job, not a
-    # PickupRequest. We look up the Job, then check its linked request.
-    # If your frontend actually passes a PickupRequest ID here, switch
-    # this back to PickupRequest.objects.get(id=pk) and update urls.py
-    # to use a separate path like /admin/requests/:id/assign/.
-    try:
-        job = Job.objects.get(id=pk)
-        return Response(
-            {'error': 'This job already exists and is assigned'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except Job.DoesNotExist:
-        pass
-
     try:
         pickup = PickupRequest.objects.get(id=pk)
     except PickupRequest.DoesNotExist:
@@ -220,17 +204,16 @@ def assign_job(request, pk):
             status='ASSIGNED'
         )
 
-        from notifications.models import Notification
-
-        Notification.objects.create(
-            user=collector,
-            notification_type=Notification.NotificationType.JOB_ASSIGNED,
-            title='New job assigned',
-            message=f'You have a new pickup job. Check your app for details.',
-            job=job,
-        )
         pickup.status = 'ASSIGNED'
         pickup.save()
+
+        Notification.objects.create(
+            recipient=collector,
+            channel='PUSH',
+            event='JOB_ASSIGNED',
+            message='You have a new pickup job assigned. Check your app for details.',
+            status='PENDING'
+        )
 
         return Response(
             JobSerializer(job).data,
@@ -250,7 +233,6 @@ def user_list(request):
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def zone_list(request):
-    # FIX: Filter out null service_area values before returning
     zones = CollectorProfile.objects.filter(
         service_area__isnull=False
     ).exclude(
@@ -267,17 +249,27 @@ def zone_list(request):
 def reports(request):
     data = {
         'total_pickups': PickupRequest.objects.count(),
-        'completed_pickups': PickupRequest.objects.filter(status='COMPLETED').count(),
-        'failed_pickups': PickupRequest.objects.filter(status='FAILED').count(),
+        'completed_pickups': PickupRequest.objects.filter(
+            status='COMPLETED'
+        ).count(),
+        'failed_pickups': PickupRequest.objects.filter(
+            status='FAILED'
+        ).count(),
         'channel_breakdown': {
             'app': PickupRequest.objects.filter(channel='APP').count(),
             'whatsapp': PickupRequest.objects.filter(channel='WHATSAPP').count(),
             'call': PickupRequest.objects.filter(channel='CALL').count(),
-            'admin_entry': PickupRequest.objects.filter(channel='ADMIN_ENTRY').count(),
+            'admin_entry': PickupRequest.objects.filter(
+                channel='ADMIN_ENTRY'
+            ).count(),
         },
         'waste_type_breakdown': {
-            'general': PickupRequest.objects.filter(waste_type='GENERAL').count(),
-            'recyclable': PickupRequest.objects.filter(waste_type='RECYCLABLE').count(),
+            'general': PickupRequest.objects.filter(
+                waste_type='GENERAL'
+            ).count(),
+            'recyclable': PickupRequest.objects.filter(
+                waste_type='RECYCLABLE'
+            ).count(),
         }
     }
     return Response(data, status=status.HTTP_200_OK)
@@ -292,16 +284,6 @@ def resolve_report(request, pk):
         return Response(
             {'error': 'Job not found'},
             status=status.HTTP_404_NOT_FOUND
-        )
-
-    # FIX: Only allow resolving jobs that are actually in a failed/disputed state.
-    # Adjust these statuses to match your Job model's STATUS choices.
-    resolvable_statuses = ['FAILED', 'DISPUTED', 'MISSED']
-    if job.status not in resolvable_statuses:
-        return Response(
-            {'error': f'Job cannot be resolved from status "{job.status}". '
-                      f'Must be one of: {resolvable_statuses}'},
-            status=status.HTTP_400_BAD_REQUEST
         )
 
     job.status = 'COMPLETED'
