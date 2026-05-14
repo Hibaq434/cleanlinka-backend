@@ -3,7 +3,7 @@ from django.db import models
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, phone_number, name, role, password=None, **extra_fields):
+    def create_user(self, phone_number, name, role='HOUSEHOLD', password=None, **extra_fields):
         if not phone_number:
             raise ValueError('Phone number is required')
         user = self.model(
@@ -21,9 +21,13 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_verified', True)
-        return self.create_user(phone_number, name, role='ADMIN', password=password, **extra_fields)
-
-
+        return self.create_user(
+            phone_number=phone_number,
+            name=name,
+            role='ADMIN',
+            password=password,
+            **extra_fields
+        )
 class User(AbstractBaseUser, PermissionsMixin):
 
     class Role(models.TextChoices):

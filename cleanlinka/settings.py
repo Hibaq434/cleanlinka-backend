@@ -125,10 +125,9 @@ REST_FRAMEWORK = {
     ),
 }
 AUTHENTICATION_BACKENDS = [
-    'users.backends.PhoneBackend',
+    'users.backends.PhoneNumberBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = False
