@@ -5,6 +5,7 @@ from django.utils import timezone
 from users.models import User, CollectorProfile, NINVerification
 from pickups.models import PickupRequest, Job
 from notifications.models import Notification
+from notifications.sms import send_job_assigned_sms
 from .permissions import IsAdmin
 from .serializers import (
     CollectorListSerializer, UserListSerializer,
@@ -214,6 +215,21 @@ def assign_job(request, pk):
             message='You have a new pickup job assigned. Check your app for details.',
             status='PENDING'
         )
+
+        sms_notification = Notification.objects.create(
+            recipient=collector,
+            channel=Notification.Channel.SMS,
+            event=Notification.Event.JOB_ASSIGNED,
+            message='You have a new pickup job assigned. Check your app for details.',
+            status=Notification.Status.PENDING,
+        )
+
+        result = send_job_assigned_sms(collector.phone_number, collector.name)
+        if result.get('success'):
+            sms_notification.status = Notification.Status.SENT
+        else:
+            sms_notification.status = Notification.Status.FAILED
+        sms_notification.save(update_fields=['status'])
 
         return Response(
             JobSerializer(job).data,

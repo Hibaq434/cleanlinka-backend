@@ -158,6 +158,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+# Africa's Talking
+AT_USERNAME = config('AT_USERNAME', default='')
+AT_API_KEY = config('AT_API_KEY', default='')
+AT_SSL_VERIFY = config('AT_SSL_VERIFY', default=True, cast=bool)
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'

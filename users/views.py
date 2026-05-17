@@ -30,10 +30,9 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        channel = 'EMAIL' if user.email else 'SMS'
-        send_otp(user, channel=channel)
+        send_otp(user, channel='SMS')
         return Response({
-            'message': f'Registration successful. OTP sent via {channel}.',
+            'message': 'Registration successful. OTP sent via SMS.',
             'phone_number': user.phone_number,
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -50,7 +49,10 @@ def verify_otp(request):
         try:
             user = User.objects.get(phone_number=phone_number)
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         otp = OTPVerification.objects.filter(
             user=user,
@@ -90,7 +92,10 @@ def resend_otp(request):
         try:
             user = User.objects.get(phone_number=phone_number)
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         if user.is_active:
             return Response(
@@ -98,10 +103,9 @@ def resend_otp(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        channel = 'EMAIL' if user.email else 'SMS'
-        send_otp(user, channel=channel)
+        send_otp(user, channel='SMS')
         return Response(
-            {'message': f'OTP resent via {channel}.'},
+            {'message': 'OTP resent via SMS.'},
             status=status.HTTP_200_OK
         )
 
@@ -119,10 +123,16 @@ def login(request):
         try:
             user = User.objects.get(phone_number=phone_number)
         except User.DoesNotExist:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Invalid credentials'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
         if not user.check_password(password):
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Invalid credentials'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
         if not user.is_active:
             return Response(

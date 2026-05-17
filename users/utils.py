@@ -12,6 +12,9 @@ def generate_otp():
 
 
 def send_otp(user, channel='EMAIL'):
+    print(f"[DEBUG] send_otp called with channel: {channel}")
+    
+    # Invalidate existing unused OTPs
     OTPVerification.objects.filter(
         user=user,
         is_used=False
@@ -27,7 +30,11 @@ def send_otp(user, channel='EMAIL'):
         expires_at=expires_at
     )
 
+    print(f"[DEBUG] channel is SMS: {channel == 'SMS'}")
+    print(f"[DEBUG] user.phone_number: {user.phone_number}")
+
     if channel == 'EMAIL' and user.email:
+        print(f"[DEBUG] Sending EMAIL to {user.email}")
         send_mail(
             subject='CleanLinka - Your Verification Code',
             message=f'Your verification code is: {code}\n\nThis code expires in 10 minutes.',
@@ -36,7 +43,12 @@ def send_otp(user, channel='EMAIL'):
             fail_silently=False,
         )
 
-    if channel == 'SMS':
-        print(f'[DEV] OTP for {user.phone_number}: {code}')
+    if channel == 'SMS' and user.phone_number:
+        print(f"[DEBUG] Sending SMS to {user.phone_number}")
+        from notifications.sms import send_otp_sms
+        result = send_otp_sms(user.phone_number, code)
+        print(f"[SMS Response] {result}")
+
+    print(f"[DEV] OTP for {user.phone_number}: {code}")
 
     return otp
