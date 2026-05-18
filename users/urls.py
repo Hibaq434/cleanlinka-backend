@@ -9,4 +9,5 @@ urlpatterns = [
     path('logout/', views.logout, name='logout'),
     path('verify-nin/', views.verify_nin, name='verify-nin'),
     path('me/', views.me, name='me'),
+    path('dev/otp/', views.get_dev_otp, name='dev-otp'),
 ]

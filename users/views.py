@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -209,3 +210,37 @@ def verify_nin(request):
         }, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+
+def get_dev_otp(request):
+    if not settings.DEBUG:
+        return Response(
+            {'error': 'This endpoint is only available in development'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    phone_number = request.query_params.get('phone_number')
+    if not phone_number:
+        return Response(
+            {'error': 'phone_number is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    otp = OTPVerification.objects.filter(
+        user__phone_number=phone_number,
+        is_used=False
+    ).last()
+
+    if not otp:
+        return Response(
+            {'error': 'No active OTP found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    return Response({
+        'otp': otp.code,
+        'expires_at': otp.expires_at,
+        'phone_number': phone_number
+    }, status=status.HTTP_200_OK)
