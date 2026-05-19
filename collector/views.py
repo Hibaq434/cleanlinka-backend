@@ -22,15 +22,9 @@ def profile(request):
 
     if request.method == 'PATCH':
         data = request.data
-        collector_profile.vehicle_type = data.get(
-            'vehicle_type', collector_profile.vehicle_type
-        )
-        collector_profile.service_area = data.get(
-            'service_area', collector_profile.service_area
-        )
-        collector_profile.is_available = data.get(
-            'is_available', collector_profile.is_available
-        )
+        collector_profile.vehicle_type = data.get('vehicle_type', collector_profile.vehicle_type)
+        collector_profile.service_area = data.get('service_area', collector_profile.service_area)
+        collector_profile.is_available = data.get('is_available', collector_profile.is_available)
         collector_profile.save()
         serializer = CollectorProfileSerializer(collector_profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -49,7 +43,6 @@ def job_list(request):
 @api_view(['GET'])
 @permission_classes([IsCollector])
 def pending_jobs(request):
-    # Polling endpoint — frontend calls this every 10 seconds
     jobs = Job.objects.filter(
         collector=request.user,
         status='ASSIGNED'
@@ -79,6 +72,22 @@ def accept_job(request, pk):
     job.accepted_at = timezone.now()
     job.save()
 
+    # Notify household via SMS
+    household = job.request.household
+    if household:
+        try:
+            from notifications.sms import send_collector_accepted_sms
+            Notification.objects.create(
+                recipient=household,
+                channel='SMS',
+                event='COLLECTOR_ACCEPTED',
+                message='A collector has accepted your pickup request and is on the way.',
+                status='PENDING'
+            )
+            send_collector_accepted_sms(household.phone_number, household.name)
+        except Exception as e:
+            print(f"[SMS Error] {str(e)}")
+
     return Response(
         {'message': 'Job accepted successfully.'},
         status=status.HTTP_200_OK
@@ -105,7 +114,6 @@ def decline_job(request, pk):
     job.status = 'REJECTED'
     job.save()
 
-    # Mark pickup request back to pending for reassignment
     job.request.status = 'PENDING'
     job.request.save()
 
@@ -158,17 +166,13 @@ def complete_job(request, pk):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Handle optional disposal log
     disposal_data = request.data.get('disposal_log')
     if disposal_data:
         serializer = DisposalLogSerializer(data=disposal_data)
         if serializer.is_valid():
             DisposalLog.objects.create(job=job, **serializer.validated_data)
         else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     job.status = 'COMPLETED'
     job.completed_at = timezone.now()
@@ -176,6 +180,22 @@ def complete_job(request, pk):
 
     job.request.status = 'COMPLETED'
     job.request.save()
+
+    # Notify household job is completed
+    household = job.request.household
+    if household:
+        try:
+            from notifications.sms import send_job_completed_sms
+            Notification.objects.create(
+                recipient=household,
+                channel='SMS',
+                event='JOB_COMPLETED',
+                message='Your waste pickup has been completed. Thank you for using CleanLinka!',
+                status='PENDING'
+            )
+            send_job_completed_sms(household.phone_number, household.name)
+        except Exception as e:
+            print(f"[SMS Error] {str(e)}")
 
     return Response(
         {'message': 'Job completed successfully.'},

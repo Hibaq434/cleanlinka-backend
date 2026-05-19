@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/admin/', include('admin_panel.urls')),
     path('api/collector/', include('collector.urls')),
     path('api/locations/', include('locations.urls')),
+    path('api/pickups/', include('pickups.urls')),
 
     # Swagger
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
