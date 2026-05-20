@@ -213,9 +213,12 @@ def verify_nin(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-
 def get_dev_otp(request):
-    if not settings.DEBUG:
+    # Allow in DEBUG mode OR with correct dev secret key
+    dev_secret = request.query_params.get('secret')
+    allowed = settings.DEBUG or dev_secret == settings.DEV_SECRET_KEY
+
+    if not allowed:
         return Response(
             {'error': 'This endpoint is only available in development'},
             status=status.HTTP_403_FORBIDDEN

@@ -184,3 +184,4 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+DEV_SECRET_KEY = config('DEV_SECRET_KEY', default='')
