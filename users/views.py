@@ -13,6 +13,7 @@ from .serializers import (
 )
 from .models import OTPVerification, NINVerification
 from .utils import send_otp
+from drf_spectacular.utils import extend_schema
 
 User = get_user_model()
 
@@ -24,7 +25,7 @@ def get_tokens_for_user(user):
         'access': str(refresh.access_token),
     }
 
-
+@extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
@@ -38,7 +39,7 @@ def register(request):
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(request=VerifyOTPSerializer, responses={200: UserSerializer})
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_otp(request):
@@ -112,7 +113,7 @@ def resend_otp(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(request=LoginSerializer, responses={200: UserSerializer})
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
