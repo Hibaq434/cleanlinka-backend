@@ -86,6 +86,7 @@ def verify_otp(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(request=ResendOTPSerializer, responses={200: None})
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def resend_otp(request):
