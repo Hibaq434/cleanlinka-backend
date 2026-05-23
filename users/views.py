@@ -14,6 +14,7 @@ from .serializers import (
 from .models import OTPVerification, NINVerification
 from .utils import send_otp
 from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 User = get_user_model()
 
@@ -212,6 +213,13 @@ def verify_nin(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='phone_number', type=str, location=OpenApiParameter.QUERY, required=True),
+        OpenApiParameter(name='secret', type=str, location=OpenApiParameter.QUERY, required=True),
+    ],
+    responses={200: None}
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_dev_otp(request):
