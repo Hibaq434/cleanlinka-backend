@@ -47,7 +47,24 @@ def collector_list(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@extend_schema(responses={200: CollectorListSerializer})
+@extend_schema(
+    methods=['GET'],
+    responses={200: CollectorListSerializer}
+)
+@extend_schema(
+    methods=['PATCH'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'vehicle_type': {'type': 'string'},
+                'service_area': {'type': 'string'},
+                'is_available': {'type': 'boolean'},
+            }
+        }
+    },
+    responses={200: CollectorListSerializer}
+)
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAdmin])
 def collector_detail(request, pk):
@@ -104,6 +121,10 @@ def verify_collector(request, pk):
     profile.is_verified = True
     profile.save()
 
+    # Activate the collector account
+    collector.is_active = True
+    collector.save()
+
     try:
         nin = collector.nin_verification
         nin.status = 'VERIFIED'
@@ -113,10 +134,13 @@ def verify_collector(request, pk):
     except NINVerification.DoesNotExist:
         pass
 
-    return Response(
-        {'message': f'Collector {collector.name} verified successfully.'},
-        status=status.HTTP_200_OK
-    )
+    return Response({
+        'message': f'Collector {collector.name} verified successfully.',
+        'is_verified': True,
+        'is_active': collector.is_active,
+        'status': 'active'
+    }, status=status.HTTP_200_OK)
+
 
 @extend_schema(responses={200: JobSerializer(many=True)})
 @api_view(['GET', 'POST'])
@@ -268,6 +292,7 @@ def zone_list(request):
         status=status.HTTP_200_OK
     )
 
+
 @extend_schema(responses={200: None})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
@@ -323,3 +348,49 @@ def resolve_report(request, pk):
         {'message': 'Report resolved successfully.'},
         status=status.HTTP_200_OK
     )
+
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'is_active': {'type': 'boolean'},
+            },
+            'required': ['is_active']
+        }
+    },
+    responses={200: None}
+)
+@api_view(['PATCH'])
+@permission_classes([IsAdmin])
+def toggle_collector_status(request, pk):
+    try:
+        collector = User.objects.get(id=pk, role='COLLECTOR')
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Collector not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    is_active = request.data.get('is_active')
+    if is_active is None:
+        return Response(
+            {'error': 'is_active field is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    collector.is_active = is_active
+    collector.save()
+
+    try:
+        collector.collector_profile.is_available = is_active
+        collector.collector_profile.save()
+    except Exception:
+        pass
+
+    return Response({
+        'message': 'Collector status updated successfully.',
+        'is_active': collector.is_active,
+        'status': 'active' if is_active else 'inactive'
+    }, status=status.HTTP_200_OK)
