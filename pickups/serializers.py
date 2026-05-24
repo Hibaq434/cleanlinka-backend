@@ -3,43 +3,33 @@ from .models import PickupRequest
 from locations.models import Location
 
 
-class CreatePickupRequestSerializer(serializers.ModelSerializer):
-    # Location fields included directly in request
-    address_text = serializers.CharField(write_only=True)
-    landmark = serializers.CharField(write_only=True, required=False, allow_blank=True)
+class CreatePickupRequestSerializer(serializers.Serializer):
+    channel = serializers.ChoiceField(choices=['APP', 'WHATSAPP', 'CALL', 'ADMIN_ENTRY'])
+    waste_type = serializers.ChoiceField(choices=['GENERAL', 'RECYCLABLE'], default='GENERAL')
+    preferred_time = serializers.DateTimeField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    flat_rate_price = serializers.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    address_text = serializers.CharField()
+    landmark = serializers.CharField(required=False, allow_blank=True)
     latitude = serializers.DecimalField(
         max_digits=9, decimal_places=6,
-        write_only=True, required=False, allow_null=True
+        required=False, allow_null=True
     )
     longitude = serializers.DecimalField(
         max_digits=9, decimal_places=6,
-        write_only=True, required=False, allow_null=True
+        required=False, allow_null=True
     )
-    whatsapp_pin_url = serializers.URLField(
-        write_only=True, required=False, allow_blank=True
-    )
-
-    class Meta:
-        model = PickupRequest
-        fields = [
-            'channel', 'waste_type', 'preferred_time',
-            'notes', 'flat_rate_price',
-            'address_text', 'landmark',
-            'latitude', 'longitude', 'whatsapp_pin_url'
-        ]
+    whatsapp_pin_url = serializers.URLField(required=False, allow_blank=True)
 
     def create(self, validated_data):
-        # Extract location fields
         address_text = validated_data.pop('address_text')
         landmark = validated_data.pop('landmark', '')
         latitude = validated_data.pop('latitude', None)
         longitude = validated_data.pop('longitude', None)
         whatsapp_pin_url = validated_data.pop('whatsapp_pin_url', '')
 
-        # Create pickup request
         pickup = PickupRequest.objects.create(**validated_data)
 
-        # Create location
         Location.objects.create(
             request=pickup,
             address_text=address_text,

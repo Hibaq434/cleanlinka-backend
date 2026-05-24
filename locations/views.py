@@ -7,7 +7,23 @@ from .models import Location
 from drf_spectacular.utils import extend_schema
 
 
-@extend_schema(responses={201: None})
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'request_id': {'type': 'integer'},
+                'latitude': {'type': 'number'},
+                'longitude': {'type': 'number'},
+                'address_text': {'type': 'string'},
+                'landmark': {'type': 'string'},
+                'whatsapp_pin_url': {'type': 'string'},
+            },
+            'required': ['request_id', 'address_text']
+        }
+    },
+    responses={201: None}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_location(request):
@@ -53,7 +69,26 @@ def create_location(request):
     }, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(responses={200: None})
+@extend_schema(
+    methods=['GET'],
+    responses={200: None}
+)
+@extend_schema(
+    methods=['PATCH'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'latitude': {'type': 'number'},
+                'longitude': {'type': 'number'},
+                'address_text': {'type': 'string'},
+                'landmark': {'type': 'string'},
+                'whatsapp_pin_url': {'type': 'string'},
+            }
+        }
+    },
+    responses={200: None}
+)
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def location_detail(request, request_id):

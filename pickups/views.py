@@ -9,7 +9,10 @@ from notifications.models import Notification
 from drf_spectacular.utils import extend_schema
 
 
-@extend_schema(request=CreatePickupRequestSerializer, responses={201: PickupRequestDetailSerializer})
+@extend_schema(
+    request=CreatePickupRequestSerializer,
+    responses={201: PickupRequestDetailSerializer}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_pickup_request(request):
@@ -17,13 +20,12 @@ def create_pickup_request(request):
     if serializer.is_valid():
         pickup = serializer.save(household=request.user)
 
-        # Send confirmation SMS to household
         try:
             Notification.objects.create(
                 recipient=request.user,
                 channel='SMS',
                 event='REQUEST_RECEIVED',
-                message=f'Your waste pickup request has been received. We will assign a collector shortly.',
+                message='Your waste pickup request has been received. We will assign a collector shortly.',
                 status='PENDING'
             )
             send_request_confirmed_sms(

@@ -11,7 +11,16 @@ from .serializers import (
 )
 from drf_spectacular.utils import extend_schema
 
-@extend_schema(responses={200: CollectorProfileSerializer})
+
+@extend_schema(
+    methods=['GET'],
+    responses={200: CollectorProfileSerializer}
+)
+@extend_schema(
+    methods=['PATCH'],
+    request=CollectorProfileSerializer,
+    responses={200: CollectorProfileSerializer}
+)
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsCollector])
 def profile(request):
@@ -76,7 +85,6 @@ def accept_job(request, pk):
     job.accepted_at = timezone.now()
     job.save()
 
-    # Notify household via SMS
     household = job.request.household
     if household:
         try:
@@ -96,6 +104,7 @@ def accept_job(request, pk):
         {'message': 'Job accepted successfully.'},
         status=status.HTTP_200_OK
     )
+
 
 @extend_schema(responses={200: None})
 @api_view(['POST'])
@@ -126,6 +135,7 @@ def decline_job(request, pk):
         status=status.HTTP_200_OK
     )
 
+
 @extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsCollector])
@@ -152,7 +162,27 @@ def start_job(request, pk):
         status=status.HTTP_200_OK
     )
 
-@extend_schema(responses={200: None})
+
+@extend_schema(
+    methods=['POST'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'disposal_log': {
+                    'type': 'object',
+                    'properties': {
+                        'disposal_center': {'type': 'string'},
+                        'waste_category': {'type': 'string', 'enum': ['GENERAL', 'PLASTIC', 'METAL', 'PAPER', 'ORGANIC']},
+                        'estimated_quantity_kg': {'type': 'number'},
+                        'drop_off_time': {'type': 'string', 'format': 'date-time'},
+                    }
+                }
+            }
+        }
+    },
+    responses={200: None}
+)
 @api_view(['POST'])
 @permission_classes([IsCollector])
 def complete_job(request, pk):
@@ -185,7 +215,6 @@ def complete_job(request, pk):
     job.request.status = 'COMPLETED'
     job.request.save()
 
-    # Notify household job is completed
     household = job.request.household
     if household:
         try:
@@ -205,6 +234,7 @@ def complete_job(request, pk):
         {'message': 'Job completed successfully.'},
         status=status.HTTP_200_OK
     )
+
 
 @extend_schema(responses={200: CollectorStatsSerializer})
 @api_view(['GET'])
@@ -226,6 +256,7 @@ def stats(request):
     }
     serializer = CollectorStatsSerializer(data)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema(responses={200: None})
 @api_view(['GET'])
