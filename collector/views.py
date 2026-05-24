@@ -9,8 +9,9 @@ from .serializers import (
     CollectorProfileSerializer, CollectorJobSerializer,
     DisposalLogSerializer, CollectorStatsSerializer
 )
+from drf_spectacular.utils import extend_schema
 
-
+@extend_schema(responses={200: CollectorProfileSerializer})
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsCollector])
 def profile(request):
@@ -30,6 +31,7 @@ def profile(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: CollectorJobSerializer(many=True)})
 @api_view(['GET'])
 @permission_classes([IsCollector])
 def job_list(request):
@@ -40,6 +42,7 @@ def job_list(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: CollectorJobSerializer(many=True)})
 @api_view(['GET'])
 @permission_classes([IsCollector])
 def pending_jobs(request):
@@ -51,6 +54,7 @@ def pending_jobs(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsCollector])
 def accept_job(request, pk):
@@ -93,7 +97,7 @@ def accept_job(request, pk):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsCollector])
 def decline_job(request, pk):
@@ -122,7 +126,7 @@ def decline_job(request, pk):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsCollector])
 def start_job(request, pk):
@@ -148,7 +152,7 @@ def start_job(request, pk):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsCollector])
 def complete_job(request, pk):
@@ -202,7 +206,7 @@ def complete_job(request, pk):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: CollectorStatsSerializer})
 @api_view(['GET'])
 @permission_classes([IsCollector])
 def stats(request):
@@ -223,7 +227,7 @@ def stats(request):
     serializer = CollectorStatsSerializer(data)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@extend_schema(responses={200: None})
 @api_view(['GET'])
 @permission_classes([IsCollector])
 def notification_list(request):
@@ -244,6 +248,7 @@ def notification_list(request):
     return Response(data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: None})
 @api_view(['PATCH'])
 @permission_classes([IsCollector])
 def mark_notification_read(request, pk):

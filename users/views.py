@@ -153,14 +153,14 @@ def login(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(responses={200: UserSerializer})
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
     serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@extend_schema(request=LogoutSerializer, responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
@@ -180,7 +180,7 @@ def logout(request):
             )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(request=NINVerificationSerializer, responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_nin(request):

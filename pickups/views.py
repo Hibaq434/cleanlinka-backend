@@ -6,8 +6,10 @@ from .models import PickupRequest
 from .serializers import CreatePickupRequestSerializer, PickupRequestDetailSerializer
 from notifications.sms import send_request_confirmed_sms
 from notifications.models import Notification
+from drf_spectacular.utils import extend_schema
 
 
+@extend_schema(request=CreatePickupRequestSerializer, responses={201: PickupRequestDetailSerializer})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_pickup_request(request):
@@ -38,6 +40,7 @@ def create_pickup_request(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(responses={200: PickupRequestDetailSerializer(many=True)})
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_requests(request):
@@ -48,6 +51,7 @@ def my_requests(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: PickupRequestDetailSerializer})
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def request_detail(request, pk):

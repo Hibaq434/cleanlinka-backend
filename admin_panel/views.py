@@ -13,8 +13,10 @@ from .serializers import (
     CreatePickupRequestSerializer, DashboardSerializer,
     PickupRequestSerializer
 )
+from drf_spectacular.utils import extend_schema
 
 
+@extend_schema(responses={200: DashboardSerializer})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def dashboard(request):
@@ -34,6 +36,7 @@ def dashboard(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: CollectorListSerializer(many=True)})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def collector_list(request):
@@ -44,6 +47,7 @@ def collector_list(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: CollectorListSerializer})
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAdmin])
 def collector_detail(request, pk):
@@ -77,6 +81,7 @@ def collector_detail(request, pk):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsAdmin])
 def verify_collector(request, pk):
@@ -113,7 +118,7 @@ def verify_collector(request, pk):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: JobSerializer(many=True)})
 @api_view(['GET', 'POST'])
 @permission_classes([IsAdmin])
 def job_list(request):
@@ -135,6 +140,7 @@ def job_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(responses={200: JobSerializer})
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAdmin])
 def job_detail(request, pk):
@@ -168,6 +174,7 @@ def job_detail(request, pk):
         )
 
 
+@extend_schema(request=AssignJobSerializer, responses={201: JobSerializer})
 @api_view(['POST'])
 @permission_classes([IsAdmin])
 def assign_job(request, pk):
@@ -238,6 +245,7 @@ def assign_job(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(responses={200: UserListSerializer(many=True)})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def user_list(request):
@@ -246,6 +254,7 @@ def user_list(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: None})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def zone_list(request):
@@ -259,7 +268,7 @@ def zone_list(request):
         status=status.HTTP_200_OK
     )
 
-
+@extend_schema(responses={200: None})
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def reports(request):
@@ -291,6 +300,7 @@ def reports(request):
     return Response(data, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={200: None})
 @api_view(['PATCH'])
 @permission_classes([IsAdmin])
 def resolve_report(request, pk):

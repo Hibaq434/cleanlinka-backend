@@ -4,8 +4,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from pickups.models import PickupRequest
 from .models import Location
+from drf_spectacular.utils import extend_schema
 
 
+@extend_schema(responses={201: None})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_location(request):
@@ -51,6 +53,7 @@ def create_location(request):
     }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(responses={200: None})
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def location_detail(request, request_id):
