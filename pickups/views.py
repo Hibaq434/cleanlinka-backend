@@ -11,7 +11,8 @@ from drf_spectacular.utils import extend_schema
 
 @extend_schema(
     request=CreatePickupRequestSerializer,
-    responses={201: PickupRequestDetailSerializer}
+    responses={201: PickupRequestDetailSerializer},
+    description='Create a new pickup request with location details'
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
