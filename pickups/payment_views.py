@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from .models import PickupRequest, Payment, RequestEvent
+from admin_panel.permissions import IsAdmin
 
 
 @extend_schema(responses={200: None})
@@ -55,3 +56,70 @@ def payment_transactions(request):
     ]
 
     return Response(data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'request_id': {'type': 'integer'},
+                'amount': {'type': 'number'},
+                'method': {'type': 'string', 'enum': ['CASH', 'TRANSFER', 'CARD', 'USSD']},
+                'reference': {'type': 'string'},
+            },
+            'required': ['request_id', 'amount']
+        }
+    },
+    responses={201: None}
+)
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def record_payment(request):
+    request_id = request.data.get('request_id')
+    amount = request.data.get('amount')
+    method = request.data.get('method', 'CASH')
+    reference = request.data.get('reference', '')
+
+    if not request_id or not amount:
+        return Response(
+            {'error': 'request_id and amount are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        pickup = PickupRequest.objects.get(id=request_id)
+    except PickupRequest.DoesNotExist:
+        return Response(
+            {'error': 'Pickup request not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if hasattr(pickup, 'payment'):
+        return Response(
+            {'error': 'Payment already recorded for this request'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    payment = Payment.objects.create(
+        request=pickup,
+        household=pickup.household,
+        amount=amount,
+        method=method,
+        reference=reference,
+        status='PAID',
+        paid_at=timezone.now()
+    )
+
+    RequestEvent.objects.create(
+        request=pickup,
+        event_type='PAYMENT_RECORDED',
+        description=f'Payment of {amount} recorded via {method}'
+    )
+
+    return Response({
+        'message': 'Payment recorded successfully.',
+        'payment_id': payment.id,
+        'amount': str(payment.amount),
+        'status': payment.status,
+    }, status=status.HTTP_201_CREATED)
