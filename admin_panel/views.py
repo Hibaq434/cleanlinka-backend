@@ -399,3 +399,60 @@ def toggle_collector_status(request, pk):
         'is_active': collector.is_active,
         'status': 'active' if is_active else 'inactive'
     }, status=status.HTTP_200_OK)
+@extend_schema(responses={200: None})
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def insights_summary(request):
+    from django.db.models import Count
+
+    # Top demand areas
+    top_areas = PickupRequest.objects.exclude(
+        area__exact=''
+    ).values('area').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+
+    # Top LGAs
+    top_lgas = PickupRequest.objects.exclude(
+        lga__exact=''
+    ).values('lga').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+
+    # Active collector load
+    from pickups.models import Job
+    collector_load = Job.objects.filter(
+        status__in=['ASSIGNED', 'ACCEPTED', 'ON_THE_WAY']
+    ).values(
+        'collector__id',
+        'collector__name',
+        'collector__phone_number'
+    ).annotate(
+        active_jobs=Count('id')
+    ).order_by('-active_jobs')[:10]
+
+    # Request counts
+    total = PickupRequest.objects.count()
+    completed = PickupRequest.objects.filter(status='COMPLETED').count()
+    pending = PickupRequest.objects.filter(status='PENDING').count()
+    assigned = PickupRequest.objects.filter(status='ASSIGNED').count()
+    failed = PickupRequest.objects.filter(status='FAILED').count()
+
+    return Response({
+        'request_counts': {
+            'total': total,
+            'pending': pending,
+            'assigned': assigned,
+            'completed': completed,
+            'failed': failed,
+            'conversion_rate': round((completed / total * 100) if total > 0 else 0, 2),
+        },
+        'top_demand_areas': list(top_areas),
+        'top_demand_lgas': list(top_lgas),
+        'active_collector_load': list(collector_load),
+        'collector_counts': {
+            'total': User.objects.filter(role='COLLECTOR').count(),
+            'verified': CollectorProfile.objects.filter(is_verified=True).count(),
+            'active': User.objects.filter(role='COLLECTOR', is_active=True).count(),
+        }
+    }, status=status.HTTP_200_OK)

@@ -27,6 +27,8 @@ urlpatterns = [
     path('api/locations/', include('locations.urls')),
     path('api/pickups/', include('pickups.urls')),
     path('api/household/', include('pickups.household_urls')),
+        path('api/household/payments/', include('pickups.payment_urls')),
+
 
 
     # Swagger

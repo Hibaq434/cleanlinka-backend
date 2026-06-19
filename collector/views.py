@@ -318,3 +318,16 @@ def mark_notification_read(request, pk):
         {'message': 'Notification marked as read.'},
         status=status.HTTP_200_OK
     )
+@extend_schema(responses={200: None})
+@api_view(['POST'])
+@permission_classes([IsCollector])
+def mark_all_notifications_read(request):
+    Notification.objects.filter(
+        recipient=request.user,
+        status='PENDING'
+    ).update(status='SENT')
+
+    return Response(
+        {'message': 'All notifications marked as read.'},
+        status=status.HTTP_200_OK
+    )

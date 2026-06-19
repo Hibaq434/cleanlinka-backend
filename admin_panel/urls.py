@@ -14,4 +14,5 @@ urlpatterns = [
     path('zones/', views.zone_list, name='admin-zone-list'),
     path('reports/', views.reports, name='admin-reports'),
     path('reports/<int:pk>/resolve/', views.resolve_report, name='admin-resolve-report'),
+    path('insights/summary/', views.insights_summary, name='admin-insights-summary'),
 ]

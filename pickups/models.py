@@ -168,3 +168,45 @@ class RequestEvent(models.Model):
 
     def __str__(self):
         return f"Event {self.event_type} for Request #{self.request.id}"
+
+
+class Payment(models.Model):
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        PAID = 'PAID', 'Paid'
+        FAILED = 'FAILED', 'Failed'
+        REFUNDED = 'REFUNDED', 'Refunded'
+
+    class Method(models.TextChoices):
+        CASH = 'CASH', 'Cash'
+        TRANSFER = 'TRANSFER', 'Bank Transfer'
+        CARD = 'CARD', 'Card'
+        USSD = 'USSD', 'USSD'
+
+    request = models.OneToOneField(
+        PickupRequest, on_delete=models.CASCADE,
+        related_name='payment'
+    )
+    household = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='payments'
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    method = models.CharField(
+        max_length=20,
+        choices=Method.choices,
+        default=Method.CASH
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    reference = models.CharField(max_length=100, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment #{self.id} - {self.status} - {self.amount}"
