@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
 from users.models import User, CollectorProfile, NINVerification
-from pickups.models import PickupRequest, Job
+from pickups.models import PickupRequest, Job, RequestEvent
 from notifications.models import Notification
 from notifications.sms import send_job_assigned_sms
 from .permissions import IsAdmin
@@ -121,7 +121,6 @@ def verify_collector(request, pk):
     profile.is_verified = True
     profile.save()
 
-    # Activate the collector account
     collector.is_active = True
     collector.save()
 
@@ -238,6 +237,12 @@ def assign_job(request, pk):
 
         pickup.status = 'ASSIGNED'
         pickup.save()
+
+        RequestEvent.objects.create(
+            request=pickup,
+            event_type='ASSIGNED',
+            description=f'Collector {collector.name} assigned to this request'
+        )
 
         Notification.objects.create(
             recipient=collector,

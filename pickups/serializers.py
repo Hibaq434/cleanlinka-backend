@@ -1,11 +1,13 @@
 from rest_framework import serializers
-from .models import PickupRequest
+from .models import PickupRequest, RequestEvent
 from locations.models import Location
 
 
 class CreatePickupRequestSerializer(serializers.Serializer):
     channel = serializers.ChoiceField(choices=['APP', 'WHATSAPP', 'CALL', 'ADMIN_ENTRY'])
     waste_type = serializers.ChoiceField(choices=['GENERAL', 'RECYCLABLE'], default='GENERAL')
+    lga = serializers.CharField(required=False, allow_blank=True)
+    area = serializers.CharField(required=False, allow_blank=True)
     preferred_time = serializers.DateTimeField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
     flat_rate_price = serializers.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -39,19 +41,26 @@ class CreatePickupRequestSerializer(serializers.Serializer):
             whatsapp_pin_url=whatsapp_pin_url
         )
 
+        RequestEvent.objects.create(
+            request=pickup,
+            event_type='CREATED',
+            description='Pickup request created'
+        )
+
         return pickup
 
 
 class PickupRequestDetailSerializer(serializers.ModelSerializer):
     location = serializers.SerializerMethodField()
     job_status = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
 
     class Meta:
         model = PickupRequest
         fields = [
-            'id', 'channel', 'waste_type', 'preferred_time',
-            'notes', 'flat_rate_price', 'status',
-            'location', 'job_status', 'created_at'
+            'id', 'channel', 'waste_type', 'lga', 'area',
+            'preferred_time', 'notes', 'flat_rate_price', 'status',
+            'address', 'location', 'job_status', 'created_at'
         ]
 
     def get_location(self, obj):
@@ -67,8 +76,20 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    def get_address(self, obj):
+        try:
+            return obj.location.address_text
+        except Exception:
+            return None
+
     def get_job_status(self, obj):
         try:
             return obj.job.status
         except Exception:
             return None
+
+
+class RequestEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RequestEvent
+        fields = ['id', 'event_type', 'description', 'created_at']

@@ -34,8 +34,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         national_id = validated_data.pop('national_id', None)
         vehicle_type = validated_data.pop('vehicle_type', None)
         service_area = validated_data.pop('service_area', None)
-
         password = validated_data.pop('password')
+
+        if not validated_data.get('email'):
+            validated_data['email'] = None
+
         user = User(**validated_data)
         user.set_password(password)
         user.is_active = False

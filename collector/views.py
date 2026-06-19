@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
-from pickups.models import Job, DisposalLog
+from pickups.models import Job, DisposalLog, RequestEvent
 from notifications.models import Notification
 from .permissions import IsCollector
 from .serializers import (
@@ -85,6 +85,12 @@ def accept_job(request, pk):
     job.accepted_at = timezone.now()
     job.save()
 
+    RequestEvent.objects.create(
+        request=job.request,
+        event_type='ACCEPTED',
+        description='Collector accepted the job and is on the way'
+    )
+
     household = job.request.household
     if household:
         try:
@@ -157,6 +163,12 @@ def start_job(request, pk):
     job.status = 'ON_THE_WAY'
     job.save()
 
+    RequestEvent.objects.create(
+        request=job.request,
+        event_type='ON_THE_WAY',
+        description='Collector is on the way to the household'
+    )
+
     return Response(
         {'message': 'Job started. On the way to household.'},
         status=status.HTTP_200_OK
@@ -214,6 +226,12 @@ def complete_job(request, pk):
 
     job.request.status = 'COMPLETED'
     job.request.save()
+
+    RequestEvent.objects.create(
+        request=job.request,
+        event_type='COMPLETED',
+        description='Pickup completed successfully'
+    )
 
     household = job.request.household
     if household:

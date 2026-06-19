@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/collector/', include('collector.urls')),
     path('api/locations/', include('locations.urls')),
     path('api/pickups/', include('pickups.urls')),
+    path('api/household/', include('pickups.household_urls')),
+
 
     # Swagger
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

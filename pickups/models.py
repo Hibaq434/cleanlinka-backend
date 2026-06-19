@@ -31,6 +31,8 @@ class PickupRequest(models.Model):
         choices=WasteType.choices,
         default=WasteType.GENERAL
     )
+    lga = models.CharField(max_length=100, blank=True)
+    area = models.CharField(max_length=100, blank=True)
     preferred_time = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
     flat_rate_price = models.DecimalField(
@@ -139,3 +141,30 @@ class Rating(models.Model):
 
     def __str__(self):
         return f"Rating for Job #{self.job.id} - {self.score}/5"
+
+
+class RequestEvent(models.Model):
+
+    class EventType(models.TextChoices):
+        CREATED = 'CREATED', 'Request Created'
+        REVIEWED = 'REVIEWED', 'Request Reviewed'
+        ASSIGNED = 'ASSIGNED', 'Collector Assigned'
+        ACCEPTED = 'ACCEPTED', 'Collector Accepted'
+        ON_THE_WAY = 'ON_THE_WAY', 'Collector En Route'
+        COMPLETED = 'COMPLETED', 'Completed'
+        PAYMENT_RECORDED = 'PAYMENT_RECORDED', 'Payment Recorded'
+        FAILED = 'FAILED', 'Failed'
+
+    request = models.ForeignKey(
+        PickupRequest, on_delete=models.CASCADE,
+        related_name='events'
+    )
+    event_type = models.CharField(max_length=30, choices=EventType.choices)
+    description = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Event {self.event_type} for Request #{self.request.id}"
