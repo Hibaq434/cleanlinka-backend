@@ -65,6 +65,9 @@ class CollectorProfile(models.Model):
     national_id = models.CharField(max_length=100)
     vehicle_type = models.CharField(max_length=20, choices=VehicleType.choices)
     service_area = models.CharField(max_length=255)
+    state = models.CharField(max_length=120, blank=True)
+    lga = models.CharField(max_length=120, blank=True)
+    area = models.CharField(max_length=120, blank=True)
     is_verified = models.BooleanField(default=False)
     is_available = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -72,6 +75,18 @@ class CollectorProfile(models.Model):
 
     def __str__(self):
         return f"Collector: {self.user.name}"
+
+
+class AdminProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
+    state = models.CharField(max_length=120)
+    lga = models.CharField(max_length=120)
+    area = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Admin scope: {self.user.name} ({self.lga})"
 
 
 class OTPVerification(models.Model):

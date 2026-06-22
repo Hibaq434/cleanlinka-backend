@@ -22,6 +22,9 @@ class CollectorListSerializer(serializers.ModelSerializer):
                 'national_id': profile.national_id,
                 'vehicle_type': profile.vehicle_type,
                 'service_area': profile.service_area,
+                'state': profile.state,
+                'lga': profile.lga,
+                'area': profile.area,
                 'is_verified': profile.is_verified,
                 'is_available': profile.is_available,
             }

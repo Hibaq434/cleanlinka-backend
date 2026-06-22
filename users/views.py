@@ -11,7 +11,8 @@ from .serializers import (
     ResendOTPSerializer, LoginSerializer, UserSerializer,
     LogoutSerializer, NINVerificationSerializer
 )
-from .models import OTPVerification, NINVerification
+from .location_scope import resolve_lga
+from .models import AdminProfile, OTPVerification, NINVerification
 from .utils import send_otp
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -72,6 +73,31 @@ def verify_otp(request):
 
         otp.is_used = True
         otp.save()
+
+        if user.role == 'ADMIN':
+            try:
+                admin_profile = user.admin_profile
+            except AdminProfile.DoesNotExist:
+                return Response(
+                    {'error': 'Admin scope is missing for this account.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            admin_lga = resolve_lga(
+                lga=admin_profile.lga,
+                area=admin_profile.area,
+            )
+            existing_owner = AdminProfile.objects.filter(
+                lga__iexact=admin_lga,
+                user__role='ADMIN',
+                user__is_active=True,
+            ).exclude(user=user).first()
+            if existing_owner:
+                return Response(
+                    {'error': 'Another active admin already manages this local government.'},
+                    status=status.HTTP_409_CONFLICT
+                )
+
         user.is_active = True
         user.is_verified = True
         user.save()
