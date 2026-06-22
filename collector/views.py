@@ -1,7 +1,9 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from django.http import StreamingHttpResponse
 from django.utils import timezone
+import json
 from pickups.models import Job, DisposalLog, RequestEvent
 from notifications.models import Notification
 from .permissions import IsCollector
@@ -10,6 +12,20 @@ from .serializers import (
     DisposalLogSerializer, CollectorStatsSerializer
 )
 from drf_spectacular.utils import extend_schema
+
+
+def _serialize_notification(notification):
+    return {
+        'id': notification.id,
+        'channel': notification.channel,
+        'event': notification.event,
+        'notification_type': notification.event,
+        'message': notification.message,
+        'status': notification.status,
+        'is_read': notification.status != Notification.Status.PENDING,
+        'created_at': notification.created_at.isoformat() if notification.created_at else None,
+        'job': None,
+    }
 
 
 @extend_schema(
@@ -283,18 +299,30 @@ def notification_list(request):
     notifications = Notification.objects.filter(
         recipient=request.user
     ).order_by('-created_at')
-    data = [
-        {
-            'id': n.id,
-            'channel': n.channel,
-            'event': n.event,
-            'message': n.message,
-            'status': n.status,
-            'created_at': n.created_at,
-        }
-        for n in notifications
-    ]
+    data = [_serialize_notification(n) for n in notifications]
     return Response(data, status=status.HTTP_200_OK)
+
+
+@extend_schema(responses={200: None})
+@api_view(['GET'])
+@permission_classes([IsCollector])
+def notification_stream(request):
+    last_id = int(request.query_params.get('last_id', 0) or 0)
+    notifications = Notification.objects.filter(
+        recipient=request.user,
+        id__gt=last_id,
+    ).order_by('id')[:25]
+
+    def stream():
+        yield "event: ready\ndata: {}\n\n"
+        for notification in notifications:
+            payload = json.dumps(_serialize_notification(notification))
+            yield f"event: notification\ndata: {payload}\n\n"
+
+    response = StreamingHttpResponse(stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @extend_schema(responses={200: None})
