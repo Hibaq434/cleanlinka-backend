@@ -1,6 +1,38 @@
 from rest_framework import serializers
 from .models import PickupRequest, RequestEvent
+from .pricing import BAG_SIZES, apply_pricing_fields
 from locations.models import Location
+
+
+PRICING_FIELDS = [
+    'bag_count', 'bag_size', 'bag_unit_price',
+    'service_amount', 'vat_rate', 'vat_amount',
+    'total_amount', 'collector_payout',
+    'company_service_share', 'company_revenue',
+]
+
+
+def parse_request_notes(value=''):
+    parsed = {'address': '', 'lga': '', 'area': '', 'notes': ''}
+    extras = []
+
+    for raw_line in str(value or '').splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith('Address:'):
+            parsed['address'] = line.replace('Address:', '', 1).strip()
+        elif line.startswith('LGA:'):
+            parsed['lga'] = line.replace('LGA:', '', 1).strip()
+        elif line.startswith('Area:'):
+            parsed['area'] = line.replace('Area:', '', 1).strip()
+        elif line.startswith('Notes:'):
+            extras.append(line.replace('Notes:', '', 1).strip())
+        else:
+            extras.append(line)
+
+    parsed['notes'] = '\n'.join(extras).strip()
+    return parsed
 
 
 class CreatePickupRequestSerializer(serializers.Serializer):
@@ -11,7 +43,9 @@ class CreatePickupRequestSerializer(serializers.Serializer):
     preferred_time = serializers.DateTimeField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
     flat_rate_price = serializers.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    address_text = serializers.CharField()
+    bag_count = serializers.IntegerField(required=False, min_value=1, default=1)
+    bag_size = serializers.ChoiceField(choices=list(BAG_SIZES.keys()), required=False, default='standard')
+    address_text = serializers.CharField(required=False, allow_blank=True)
     landmark = serializers.CharField(required=False, allow_blank=True)
     latitude = serializers.DecimalField(
         max_digits=9, decimal_places=6,
@@ -24,11 +58,20 @@ class CreatePickupRequestSerializer(serializers.Serializer):
     whatsapp_pin_url = serializers.URLField(required=False, allow_blank=True)
 
     def create(self, validated_data):
-        address_text = validated_data.pop('address_text')
+        pricing = apply_pricing_fields(
+            validated_data,
+            bag_count=validated_data.get('bag_count'),
+            bag_size=validated_data.get('bag_size'),
+        )
+        address_text = validated_data.pop('address_text', '')
+        if not address_text:
+            parsed_notes = parse_request_notes(validated_data.get('notes', ''))
+            address_text = parsed_notes.get('address', '')
         landmark = validated_data.pop('landmark', '')
         latitude = validated_data.pop('latitude', None)
         longitude = validated_data.pop('longitude', None)
         whatsapp_pin_url = validated_data.pop('whatsapp_pin_url', '')
+        validated_data.update(pricing)
 
         pickup = PickupRequest.objects.create(**validated_data)
 
@@ -60,6 +103,7 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'channel', 'waste_type', 'lga', 'area',
             'preferred_time', 'notes', 'flat_rate_price', 'status',
+            *PRICING_FIELDS,
             'address', 'location', 'job_status', 'created_at'
         ]
 
@@ -93,3 +137,7 @@ class RequestEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = RequestEvent
         fields = ['id', 'event_type', 'description', 'created_at']
+
+
+class HouseholdPickupRequestSerializer(PickupRequestDetailSerializer):
+    pass

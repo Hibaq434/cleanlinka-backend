@@ -813,6 +813,7 @@ def toggle_collector_status(request, pk):
         )
 
     is_active = request.data.get('is_active')
+    review_notes = request.data.get('review_notes')
     if is_active is None:
         return Response(
             {'error': 'is_active field is required'},
@@ -820,11 +821,26 @@ def toggle_collector_status(request, pk):
         )
 
     collector.is_active = is_active
-    collector.save()
+    if not is_active:
+        collector.is_verified = False
+    collector.save(update_fields=['is_active', 'is_verified', 'updated_at'])
 
     try:
         collector.collector_profile.is_available = is_active
-        collector.collector_profile.save()
+        if not is_active:
+            collector.collector_profile.is_verified = False
+        if review_notes is not None:
+            collector.collector_profile.review_notes = str(review_notes).strip()
+        collector.collector_profile.reviewed_by = request.user
+        collector.collector_profile.reviewed_at = timezone.now()
+        collector.collector_profile.save(update_fields=[
+            'is_available',
+            'is_verified',
+            'review_notes',
+            'reviewed_by',
+            'reviewed_at',
+            'updated_at',
+        ])
     except Exception:
         pass
 

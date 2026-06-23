@@ -68,7 +68,7 @@ def payment_transactions(request):
                 'method': {'type': 'string', 'enum': ['CASH', 'TRANSFER', 'CARD', 'USSD']},
                 'reference': {'type': 'string'},
             },
-            'required': ['request_id', 'amount']
+            'required': ['request_id']
         }
     },
     responses={201: None}
@@ -81,9 +81,9 @@ def record_payment(request):
     method = request.data.get('method', 'CASH')
     reference = request.data.get('reference', '')
 
-    if not request_id or not amount:
+    if not request_id:
         return Response(
-            {'error': 'request_id and amount are required'},
+            {'error': 'request_id is required'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -100,6 +100,8 @@ def record_payment(request):
             {'error': 'Payment already recorded for this request'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    amount = amount or pickup.flat_rate_price
 
     payment = Payment.objects.create(
         request=pickup,

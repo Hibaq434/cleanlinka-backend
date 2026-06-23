@@ -70,6 +70,15 @@ class CollectorProfile(models.Model):
     area = models.CharField(max_length=120, blank=True)
     is_verified = models.BooleanField(default=False)
     is_available = models.BooleanField(default=False)
+    review_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collector_reviews'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

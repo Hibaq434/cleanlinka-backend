@@ -1,6 +1,15 @@
 from rest_framework import serializers
 from users.models import User, CollectorProfile, NINVerification
 from pickups.models import PickupRequest, Job, DisposalLog
+from pickups.pricing import BAG_SIZES, apply_pricing_fields
+
+
+PRICING_FIELDS = [
+    'bag_count', 'bag_size', 'bag_unit_price',
+    'service_amount', 'vat_rate', 'vat_amount',
+    'total_amount', 'collector_payout',
+    'company_service_share', 'company_revenue',
+]
 
 
 class CollectorListSerializer(serializers.ModelSerializer):
@@ -56,7 +65,8 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'household', 'household_name', 'channel',
             'waste_type', 'preferred_time', 'notes',
-            'flat_rate_price', 'status', 'created_at'
+            'flat_rate_price', *PRICING_FIELDS,
+            'status', 'created_at'
         ]
 
     def get_household_name(self, obj):
@@ -125,11 +135,15 @@ class AssignJobSerializer(serializers.Serializer):
 
 
 class CreatePickupRequestSerializer(serializers.ModelSerializer):
+    bag_count = serializers.IntegerField(required=False, min_value=1, default=1)
+    bag_size = serializers.ChoiceField(choices=list(BAG_SIZES.keys()), required=False, default='standard')
+
     class Meta:
         model = PickupRequest
         fields = [
             'household', 'channel', 'waste_type',
-            'preferred_time', 'notes', 'flat_rate_price'
+            'preferred_time', 'notes', 'flat_rate_price',
+            'bag_count', 'bag_size'
         ]
 
     def create(self, validated_data):
@@ -139,6 +153,7 @@ class CreatePickupRequestSerializer(serializers.ModelSerializer):
         # If your PickupRequest model has a logged_by_admin FK field,
         # keep the line below. If not, remove it and log separately.
         logged_by_admin = validated_data.pop('logged_by_admin', None)
+        apply_pricing_fields(validated_data)
         pickup = PickupRequest.objects.create(**validated_data)
 
         if logged_by_admin:

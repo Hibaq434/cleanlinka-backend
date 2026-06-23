@@ -39,6 +39,16 @@ class PickupRequest(models.Model):
         max_digits=10, decimal_places=2,
         default=0.00
     )
+    bag_count = models.PositiveIntegerField(default=1)
+    bag_size = models.CharField(max_length=20, default='standard')
+    bag_unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=1000.00)
+    service_amount = models.DecimalField(max_digits=10, decimal_places=2, default=1500.00)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0.075)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=113.00)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=1613.00)
+    collector_payout = models.DecimalField(max_digits=10, decimal_places=2, default=1050.00)
+    company_service_share = models.DecimalField(max_digits=10, decimal_places=2, default=450.00)
+    company_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=563.00)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

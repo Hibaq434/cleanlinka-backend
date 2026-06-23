@@ -38,7 +38,8 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         model = PickupRequest
         fields = [
             'id', 'channel', 'waste_type', 'preferred_time',
-            'notes', 'flat_rate_price', 'status',
+            'notes', 'status',
+            'bag_count', 'bag_size', 'collector_payout',
             'household_name', 'household_phone',
             'location', 'created_at'
         ]
